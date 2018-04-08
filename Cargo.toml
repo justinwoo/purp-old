@@ -1,0 +1,15 @@
+[package]
+name = "purp"
+version = "0.1.0"
+authors = ["justinwoo <moomoowoo@gmail.com>"]
+description = "A convenience tool for running PureScript+Psc-Package projects"
+
+homepage = "https://github.com/justinwoo/purp"
+repository = "https://github.com/justinwoo/purp.git"
+
+license = "MIT"
+
+[dependencies]
+clap = "2.31.2"
+log = "0.4.1"
+glob = "0.2.11"
