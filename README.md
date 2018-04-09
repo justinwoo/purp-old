@@ -6,7 +6,7 @@ Make new issues or submit PRs if you want anything improved/different.
 
 ![](https://i.imgur.com/L6lArMv.jpg)
 
-Normally would named "Bongbong", but that would be hard to type.
+Normally would be named "Bongbong", but that would be hard to type.
 
 ## Usage
 
