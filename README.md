@@ -1,5 +1,7 @@
 # purp
 
+[![Build Status](https://travis-ci.org/justinwoo/purp.svg?branch=master)](https://travis-ci.org/justinwoo/purp)
+
 This is my convenience tool for doing PureScript things with Psc-Package. It doesn't try to do everything.
 
 Make new issues or submit PRs if you want anything improved/different.
