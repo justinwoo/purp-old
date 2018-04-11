@@ -175,6 +175,8 @@ fn run_bundle(main: &str) {
         .arg("./output/*/*.js")
         .arg("--module")
         .arg(main)
+        .arg("--main")
+        .arg(main)
         .spawn()
         .expect("Error in launching `node`")
         .wait()
