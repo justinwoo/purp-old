@@ -23,6 +23,23 @@ fn main() {
                         .takes_value(true),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("run")
+                .about("Run the project using Node.js")
+                .arg(
+                    Arg::with_name("main")
+                        .help("Specify the main Module to be used")
+                        .short("m")
+                        .long("main")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("skip-build")
+                        .help("Skip building the project, e.g. you have already built or use an IDE plugin")
+                        .short("s")
+                        .long("skip-build")
+                ),
+        )
         .get_matches();
 
     match matches.subcommand_name() {
@@ -36,7 +53,7 @@ fn main() {
             if build_status.success() {
                 println!("Success. Running tests.");
 
-                run_node_test(
+                run_node(
                     matches
                         .subcommand_matches("test")
                         .and_then(|matches| matches.value_of("main"))
@@ -44,6 +61,30 @@ fn main() {
                 );
             } else {
                 println!("Build failed.");
+            }
+        }
+        Some("run") => {
+            let run_matches = matches.subcommand_matches("run");
+            let main = run_matches
+                .and_then(|matches| matches.value_of("main"))
+                .unwrap_or_else(|| "Main");
+
+            let skip_build = run_matches.and_then(|matches| Some(matches.is_present("skip-build")));
+            match skip_build {
+                Some(true) => {
+                    run_node(main);
+                }
+                _ => {
+                    let build_status = psc_package_build(None);
+
+                    if build_status.success() {
+                        println!("Success.");
+
+                        run_node(main);
+                    } else {
+                        println!("Build failed.");
+                    }
+                }
             }
         }
         Some(x) => println!("Unknown task: {:?}", x),
@@ -58,8 +99,7 @@ fn main() {
         } else {
             println!("Build failed.");
         }
-    };
-}
+    };}
 
 fn push_glob(mut paths: LinkedList<String>, pattern: &str) -> LinkedList<String> {
     for path in glob(pattern)
@@ -72,19 +112,19 @@ fn push_glob(mut paths: LinkedList<String>, pattern: &str) -> LinkedList<String>
     return paths;
 }
 
-fn run_node_test(test_main: &str) {
-    let test_status = Command::new("node")
+fn run_node(main: &str) {
+    let status = Command::new("node")
         .arg("-e")
-        .arg(format!("require('./output/{}').main()", test_main))
+        .arg(format!("require('./output/{}').main()", main))
         .spawn()
         .expect("Error in launching `node`")
         .wait()
         .expect("Error in `node`");
 
-    if test_status.success() {
+    if status.success() {
         println!("Success.");
     } else {
-        println!("Test failed.");
+        println!("Failed.");
     }
 }
 
