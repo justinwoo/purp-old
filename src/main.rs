@@ -40,6 +40,23 @@ fn main() {
                         .long("skip-build")
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("bundle")
+                .about("Bundle the project using purs bundle. This does not bundle for the browser, you should build this further with a tool like Parcel.")
+                .arg(
+                    Arg::with_name("main")
+                        .help("Specify the main Module to be used")
+                        .short("m")
+                        .long("main")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("skip-build")
+                        .help("Skip building the project, e.g. you have already built or use an IDE plugin")
+                        .short("s")
+                        .long("skip-build")
+                ),
+        )
         .get_matches();
 
     match matches.subcommand_name() {
@@ -87,6 +104,30 @@ fn main() {
                 }
             }
         }
+        Some("bundle") => {
+            let run_matches = matches.subcommand_matches("bundle");
+            let main = run_matches
+                .and_then(|matches| matches.value_of("main"))
+                .unwrap_or_else(|| "Main");
+
+            let skip_build = run_matches.and_then(|matches| Some(matches.is_present("skip-build")));
+            match skip_build {
+                Some(true) => {
+                    run_bundle(main);
+                }
+                _ => {
+                    let build_status = psc_package_build(None);
+
+                    if build_status.success() {
+                        println!("Success.");
+
+                        run_bundle(main);
+                    } else {
+                        println!("Build failed.");
+                    }
+                }
+            }
+        }
         Some(x) => println!("Unknown task: {:?}", x),
         None => run_build(),
     }
@@ -126,6 +167,18 @@ fn run_node(main: &str) {
     } else {
         println!("Failed.");
     }
+}
+
+fn run_bundle(main: &str) {
+    Command::new("purs")
+        .arg("bundle")
+        .arg("./output/*/*.js")
+        .arg("--module")
+        .arg(main)
+        .spawn()
+        .expect("Error in launching `node`")
+        .wait()
+        .expect("Error in `node`");
 }
 
 fn psc_package_build(paths: Option<LinkedList<String>>) -> ExitStatus {
