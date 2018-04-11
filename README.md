@@ -33,3 +33,19 @@ Success. Running tests.
 You should add some tests.
 Success.
 ```
+
+### Run
+
+```sh
+> purp run [--skip-build (if you've already run build)]
+           [--main Main]
+Whatever output from your Main
+```
+
+### Bundle
+
+```sh
+> purp bundle [--skip-build (if you've already run build)]
+              [--main Main]
+  >> my-bundle.js # you probably want to pipe the output
+```
