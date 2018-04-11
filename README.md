@@ -12,7 +12,7 @@ Normally would be named "Bongbong", but that would be hard to type.
 
 ## Usage
 
-I only support two commands at this moment:
+This has the following:
 
 ### Build
 
