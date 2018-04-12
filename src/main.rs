@@ -3,7 +3,7 @@ extern crate clap;
 extern crate glob;
 
 use glob::glob;
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use std::process::{Command, ExitStatus};
 use std::collections::LinkedList;
 
@@ -21,6 +21,12 @@ fn main() {
                         .short("m")
                         .long("main")
                         .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("skip_build")
+                        .help("Skip building the project, e.g. you have already built or use an IDE plugin")
+                        .short("s")
+                        .long("skip_build")
                 ),
         )
         .subcommand(
@@ -34,10 +40,10 @@ fn main() {
                         .takes_value(true),
                 )
                 .arg(
-                    Arg::with_name("skip-build")
+                    Arg::with_name("skip_build")
                         .help("Skip building the project, e.g. you have already built or use an IDE plugin")
                         .short("s")
-                        .long("skip-build")
+                        .long("skip_build")
                 ),
         )
         .subcommand(
@@ -51,10 +57,10 @@ fn main() {
                         .takes_value(true),
                 )
                 .arg(
-                    Arg::with_name("skip-build")
+                    Arg::with_name("skip_build")
                         .help("Skip building the project, e.g. you have already built or use an IDE plugin")
                         .short("s")
-                        .long("skip-build")
+                        .long("skip_build")
                 ),
         )
         .get_matches();
@@ -62,23 +68,17 @@ fn main() {
     match matches.subcommand_name() {
         Some("build") => run_build(),
         Some("test") => {
+            let test_matches = matches.subcommand_matches("test");
+            let main = test_matches
+                .and_then(|matches| matches.value_of("main"))
+                .unwrap_or_else(|| "Test.Main");
+
             let mut paths: LinkedList<String> = LinkedList::new();
             paths = push_glob(paths, "./test/**/*.purs");
 
-            let build_status = psc_package_build(Some(paths));
-
-            if build_status.success() {
-                println!("Success. Running tests.");
-
-                run_node(
-                    matches
-                        .subcommand_matches("test")
-                        .and_then(|matches| matches.value_of("main"))
-                        .unwrap_or_else(|| "Test.Main"),
-                );
-            } else {
-                println!("Build failed.");
-            }
+            match_skip_build_and_then(test_matches, Some(paths), || {
+                run_node(main);
+            });
         }
         Some("run") => {
             let run_matches = matches.subcommand_matches("run");
@@ -86,23 +86,9 @@ fn main() {
                 .and_then(|matches| matches.value_of("main"))
                 .unwrap_or_else(|| "Main");
 
-            let skip_build = run_matches.and_then(|matches| Some(matches.is_present("skip-build")));
-            match skip_build {
-                Some(true) => {
-                    run_node(main);
-                }
-                _ => {
-                    let build_status = psc_package_build(None);
-
-                    if build_status.success() {
-                        println!("Success.");
-
-                        run_node(main);
-                    } else {
-                        println!("Build failed.");
-                    }
-                }
-            }
+            match_skip_build_and_then(run_matches, None, || {
+                run_node(main);
+            });
         }
         Some("bundle") => {
             let run_matches = matches.subcommand_matches("bundle");
@@ -110,37 +96,50 @@ fn main() {
                 .and_then(|matches| matches.value_of("main"))
                 .unwrap_or_else(|| "Main");
 
-            let skip_build = run_matches.and_then(|matches| Some(matches.is_present("skip-build")));
-            match skip_build {
-                Some(true) => {
-                    run_bundle(main);
-                }
-                _ => {
-                    let build_status = psc_package_build(None);
-
-                    if build_status.success() {
-                        println!("Success.");
-
-                        run_bundle(main);
-                    } else {
-                        println!("Build failed.");
-                    }
-                }
-            }
+            match_skip_build_and_then(run_matches, None, || {
+                run_bundle(main);
+            });
         }
         Some(x) => println!("Unknown task: {:?}", x),
         None => run_build(),
     }
+}
 
-    fn run_build() {
-        let build_status = psc_package_build(None);
+fn run_build() {
+    let build_status = psc_package_build(None);
 
-        if build_status.success() {
-            println!("Success.");
-        } else {
-            println!("Build failed.");
+    if build_status.success() {
+        println!("Success.");
+    } else {
+        println!("Build failed.");
+    }
+}
+
+fn match_skip_build_and_then<F>(
+    matches: Option<&ArgMatches>,
+    paths: Option<LinkedList<String>>,
+    cont: F,
+) where
+    F: Fn() -> (),
+{
+    let skip_build = matches.and_then(|matches| Some(matches.is_present("skip_build")));
+    match skip_build {
+        Some(true) => {
+            cont();
         }
-    };}
+        _ => {
+            let build_status = psc_package_build(paths);
+
+            if build_status.success() {
+                println!("Success.");
+
+                cont();
+            } else {
+                println!("Failed.");
+            }
+        }
+    }
+}
 
 fn push_glob(mut paths: LinkedList<String>, pattern: &str) -> LinkedList<String> {
     for path in glob(pattern)
