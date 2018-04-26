@@ -64,6 +64,11 @@ fn main() {
                         .takes_value(true),
                 )
                 .arg(
+                    Arg::with_name("source_maps")
+                        .help("Generate source maps for the bundle")
+                        .long("source-maps")
+                )
+                .arg(
                     Arg::with_name("skip_build")
                         .help("Skip building the project, e.g. you have already built or use an IDE plugin")
                         .short("s")
@@ -105,9 +110,18 @@ fn main() {
             let output = run_matches
                 .and_then(|matches| matches.value_of("output"))
                 .unwrap_or_else(|| "index.js");
+            let source_maps = run_matches
+                .and_then(|matches| {
+                    if matches.is_present("source_maps") {
+                        Some(true)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| false);
 
             match_skip_build_and_then(run_matches, None, || {
-                run_bundle(main, output);
+                run_bundle(main, output, source_maps);
             });
         }
         Some(x) => println!("Unknown task: {:?}", x),
@@ -178,20 +192,34 @@ fn run_node(main: &str) {
     }
 }
 
-fn run_bundle(main: &str, output: &str) {
-    Command::new("purs")
-        .arg("bundle")
+fn run_bundle(main: &str, output: &str, source_maps: bool) {
+    println!("Bundling...");
+
+    let mut cmd = Command::new("purs");
+
+    cmd.arg("bundle")
         .arg("./output/*/*.js")
         .arg("--module")
         .arg(main)
         .arg("--main")
         .arg(main)
         .arg("--output")
-        .arg(output)
-        .spawn()
+        .arg(output);
+
+    if source_maps {
+        cmd.arg("--source-maps");
+    };
+
+    let status = cmd.spawn()
         .expect("Error in launching `node`")
         .wait()
         .expect("Error in `node`");
+
+    if status.success() {
+        println!("Success.");
+    } else {
+        println!("Failed.");
+    }
 }
 
 fn psc_package_build(paths: Option<LinkedList<String>>) -> ExitStatus {
