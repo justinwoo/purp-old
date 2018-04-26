@@ -57,6 +57,13 @@ fn main() {
                         .takes_value(true),
                 )
                 .arg(
+                    Arg::with_name("output")
+                        .help("Specify the output file path (default index.js)")
+                        .short("o")
+                        .long("output")
+                        .takes_value(true),
+                )
+                .arg(
                     Arg::with_name("skip_build")
                         .help("Skip building the project, e.g. you have already built or use an IDE plugin")
                         .short("s")
@@ -95,9 +102,12 @@ fn main() {
             let main = run_matches
                 .and_then(|matches| matches.value_of("main"))
                 .unwrap_or_else(|| "Main");
+            let output = run_matches
+                .and_then(|matches| matches.value_of("output"))
+                .unwrap_or_else(|| "index.js");
 
             match_skip_build_and_then(run_matches, None, || {
-                run_bundle(main);
+                run_bundle(main, output);
             });
         }
         Some(x) => println!("Unknown task: {:?}", x),
@@ -168,7 +178,7 @@ fn run_node(main: &str) {
     }
 }
 
-fn run_bundle(main: &str) {
+fn run_bundle(main: &str, output: &str) {
     Command::new("purs")
         .arg("bundle")
         .arg("./output/*/*.js")
@@ -176,6 +186,8 @@ fn run_bundle(main: &str) {
         .arg(main)
         .arg("--main")
         .arg(main)
+        .arg("--output")
+        .arg(output)
         .spawn()
         .expect("Error in launching `node`")
         .wait()
