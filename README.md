@@ -46,6 +46,6 @@ Whatever output from your Main
 
 ```sh
 > purp bundle [--skip-build (if you've already run build)]
-              [--main Main]
-  >> my-bundle.js # you probably want to pipe the output
+              [--main Main ]
+              [--output index.js ]
 ```
