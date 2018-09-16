@@ -1,6 +1,6 @@
 [package]
 name = "purp"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["justinwoo <moomoowoo@gmail.com>"]
 description = "A convenience tool for running PureScript+Psc-Package projects"
 

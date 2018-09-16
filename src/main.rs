@@ -11,7 +11,15 @@ fn main() {
     let matches = App::new("purp")
         .version(crate_version!())
         .about("a tool for various PureScript tasks")
-        .subcommand(SubCommand::with_name("build").about("Build the project"))
+        .subcommand(
+            SubCommand::with_name("build")
+                .about("Build the project")
+                .arg(
+                    Arg::with_name("dependencies-only")
+                        .help("Build dependencies only")
+                        .short("d")
+                        .long("dependencies-only")
+                ))
         .subcommand(
             SubCommand::with_name("test")
                 .about("Test the project using Node.js")
@@ -78,7 +86,20 @@ fn main() {
         .get_matches();
 
     match matches.subcommand_name() {
-        Some("build") => run_build(),
+        Some("build") => {
+            let build_matches = matches.subcommand_matches("build");
+            let dependencies_only = build_matches
+                .and_then(|matches| {
+                    if matches.is_present("dependencies-only") {
+                        Some(true)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| false);
+
+            run_build(dependencies_only)
+        }
         Some("test") => {
             let test_matches = matches.subcommand_matches("test");
             let main = test_matches
@@ -125,12 +146,12 @@ fn main() {
             });
         }
         Some(x) => println!("Unknown task: {:?}", x),
-        None => run_build(),
+        None => run_build(false),
     }
 }
 
-fn run_build() {
-    let build_status = psc_package_build(None);
+fn run_build(dependencies_only: bool) {
+    let build_status = psc_package_build(dependencies_only, None);
 
     if build_status.success() {
         println!("Success.");
@@ -152,7 +173,7 @@ fn match_skip_build_and_then<F>(
             cont();
         }
         _ => {
-            let build_status = psc_package_build(paths);
+            let build_status = psc_package_build(false, paths);
 
             if build_status.success() {
                 println!("Success.");
@@ -222,11 +243,18 @@ fn run_bundle(main: &str, output: &str, source_maps: bool) {
     }
 }
 
-fn psc_package_build(paths: Option<LinkedList<String>>) -> ExitStatus {
+fn psc_package_build(dependencies_only: bool, paths: Option<LinkedList<String>>) -> ExitStatus {
+    let mut build_flags: LinkedList<String> = LinkedList::new();
+    if dependencies_only {
+        println!("Building with dependencies only");
+        build_flags.push_back("-d".to_string());
+    }
+
     println!("Building...");
 
     return Command::new("psc-package")
         .arg("build")
+        .args(build_flags)
         .arg("--")
         .args(paths.unwrap_or_else(|| LinkedList::new()))
         .spawn()
